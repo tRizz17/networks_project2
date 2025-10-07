@@ -12,6 +12,7 @@ def splitAndParse(header):
     method = first_line[0]
     version = first_line[2]
     file_name = os.path.split(full_path)[-1]
+    
     return method, file_name, version
 
 
@@ -26,39 +27,43 @@ def WebServer(port):
         client_addr = new_conn[1][0]
         # print(f"IP Address: {client_addr}")
         new_socket = new_conn[0]
-        buffer = ""
+        buffer = b""
         while True:
-            request_data = new_socket.recv(1024).decode("ISO-8859-1")
+            request_data = new_socket.recv(1024)
             buffer += request_data
-            if "\r\n\r\n" in buffer:
-                print(buffer)
-                header = buffer.split("\r\n")
+            if b"\r\n\r\n" in buffer:
+                decoded_buffer = buffer.decode("ISO-8859-1")
+                print(decoded_buffer)
+                header = decoded_buffer.split("\r\n")
                 method, file_name, version = splitAndParse(header)
                 mimetype, _ = mimetypes.guess_type(file_name)
+
                 if mimetype is None:
                     mimetype = "application/octet-stream"
-                print(method, file_name, version, mimetype)
+
                 try:
                     with open(file_name, "rb") as fp:
                         data = fp.read()
-                        print(data)
-                        content_length = data.length()
+                        content_length = len(data)
                         response = (
                             f"HTTP/1.1 200 OK\r\n"
                             f"Content-Type: {mimetype}\r\n"
                             f"Content-Length: {content_length}\r\n"
-                            f"Connection: close\r\n\r\n{data}\r\n\r\n"
-                        )
-                        new_socket.sendall(response.encode("ISO-8859-1"))
+                            f"Connection: close\r\n\r\n"
+                        ).encode("ISO-8859-1")
+                        new_socket.sendall(response + data)
                         new_socket.close()
-                except:
+
+                except FileNotFoundError:
+                    payload = "404 Not Found"
+                    content_length = len(payload)
                     not_found_response = (
                         "HTTP/1.1 404 Not Found\r\n"
                         "Content-Type: text/plain\r\n"
-                        "Content-Length: 13\r\n"
-                        "Connection: close\r\n\r\n404 Not Found"
-                    )
-                    new_socket.sendall(not_found_response.encode("ISO-8859-1"))
+                        f"Content-Length: {content_length}\r\n"
+                        f"Connection: close\r\n\r\n"
+                    ).encode("ISO-8859-1")
+                    new_socket.sendall(not_found_response + payload.encode("ISO-8859-1"))
                     new_socket.close()
                     break
 
@@ -70,36 +75,3 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     WebServer(args.port)
-
-# Parse that request header to get the file name.
-# Strip the path off for security reasons.
-# Read the data from the named file.
-# Determine the type of data in the file, HTML or text.
-# Build an HTTP response packet with the file data in the payload.
-# Send that HTTP response back to the client.
-
-# Response ->
-# HTTP/1.1 200 OK
-# Content-Type: text/html
-# Content-Length: 373
-# Connection: close
-
-# <!DOCtype html>
-
-# <html>
-# <head>
-# ...
-
-
-
-# if extension in mapping:
-#     else:
-#         #application/octet-stream
-
-# key = "gif"
-
-# mimeType = mapping.get(key)
-
-# if mimeType is None:
-#     #application/octet-stream
-
