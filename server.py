@@ -5,6 +5,7 @@ import argparse
 import mimetypes
 
 
+# Split this off because it was getting a little messy 
 def splitAndParse(header):
     first_line = header[0].split()
     parsed = urlparse(first_line[1])
@@ -12,8 +13,7 @@ def splitAndParse(header):
     method = first_line[0]
     version = first_line[2]
     file_name = os.path.split(full_path)[-1]
-    
-    return method, file_name, version
+    return method, file_name, version # e.g. GET file1.txt https
 
 
 def WebServer(port):
@@ -25,15 +25,15 @@ def WebServer(port):
         print("Listening for incoming connections...\r\n")
         new_conn = s.accept()
         client_addr = new_conn[1][0]
-        # print(f"IP Address: {client_addr}")
+        # print(f"IP Address: {client_addr}") Might want this later so just leaving it. 
         new_socket = new_conn[0]
         buffer = b""
         while True:
             request_data = new_socket.recv(1024)
             buffer += request_data
             if b"\r\n\r\n" in buffer:
+                # Decoding after confirming we are only reading headers
                 decoded_buffer = buffer.decode("ISO-8859-1")
-                print(decoded_buffer)
                 header = decoded_buffer.split("\r\n")
                 method, file_name, version = splitAndParse(header)
                 mimetype, _ = mimetypes.guess_type(file_name)
@@ -52,7 +52,6 @@ def WebServer(port):
                             f"Connection: close\r\n\r\n"
                         ).encode("ISO-8859-1")
                         new_socket.sendall(response + data)
-                        new_socket.close()
 
                 except FileNotFoundError:
                     payload = "404 Not Found"
@@ -64,9 +63,8 @@ def WebServer(port):
                         f"Connection: close\r\n\r\n"
                     ).encode("ISO-8859-1")
                     new_socket.sendall(not_found_response + payload.encode("ISO-8859-1"))
-                    new_socket.close()
-                    break
 
+                new_socket.close()
                 break   
 
 parser = argparse.ArgumentParser(description="Specify a port number if you wish")
